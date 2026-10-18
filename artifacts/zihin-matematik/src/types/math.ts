@@ -1,4 +1,5 @@
 export type Operation = 'add' | 'subtract' | 'multiply' | 'divide' | 'square' | 'sqrt' | 'percentage' | 'chain';
+export const BASIC_OPERATIONS: Operation[] = ['add', 'subtract', 'multiply', 'divide'];
 export type Difficulty = 'easy' | 'medium' | 'hard' | 'custom';
 export type GameMode = 'practice' | 'marathon' | 'sudden' | 'sprint';
 export type Theme = 'light' | 'dark' | 'neon';

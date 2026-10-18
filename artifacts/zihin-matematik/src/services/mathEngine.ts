@@ -1,40 +1,30 @@
-import type { CustomConfig, Difficulty, MathQuestion, Operation } from '../types/math';
+import { BASIC_OPERATIONS, type CustomConfig, type Difficulty, type MathQuestion, type Operation } from '../types/math';
 
 const randomInt=(min:number,max:number)=>Math.floor(Math.random()*(max-min+1))+min;
 const pick=<T,>(items:T[])=>items[randomInt(0,items.length-1)];
 const id=()=>`${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`;
-const digits=(n:number)=>Math.floor(Math.log10(Math.max(1,n)))+1;
 const digitRange=(count:number):[number,number]=>[count===1?1:10**(count-1),10**count-1];
 const gcd=(a:number,b:number):number=>b===0?a:gcd(b,a%b);
 
 export function generateQuestion(difficulty:Difficulty='easy', selectedOperations?:Operation[], custom?:CustomConfig):MathQuestion {
-  const operations:Operation[]=selectedOperations?.length?selectedOperations:(difficulty==='easy'?['add','subtract','multiply','divide']:['add','subtract','multiply','divide','square','sqrt','percentage','chain']);
+  const operations:Operation[]=selectedOperations??BASIC_OPERATIONS;
+  if(!operations.length)throw new Error('En az bir işlem seçilmelidir.');
   const operation=pick<Operation>(operations);
   let a=0,b=0,answer=0,expression='';
   if(operation==='add'||operation==='subtract'){
-    let min=difficulty==='easy'?1:10,max=99;
-    if(difficulty==='medium'){min=10;max=999} if(difficulty==='hard'){min=100;max=999}
-    if(difficulty==='custom'){min=10**((custom?.digits??2)-1);max=10**(custom?.digits??2)-1}
+    const [min,max]=difficulty==='custom'?digitRange(custom?.digits??2):digitRange(difficulty==='easy'?1:difficulty==='medium'?2:3);
     a=randomInt(min,max);b=randomInt(min,max);
     if(operation==='subtract'&&b>a)[a,b]=[b,a];
     answer=operation==='add'?a+b:a-b;expression=`${a} ${operation==='add'?'+':'−'} ${b}`;
   } else if(operation==='multiply'){
-    if(difficulty==='easy'){a=randomInt(2,9);b=randomInt(2,9)}
-    else if(difficulty==='medium'){a=randomInt(2,9);b=randomInt(10,99)}
-    else if(difficulty==='hard'){a=randomInt(10,99);b=randomInt(10,99)}
-    else {const lo=10**((custom?.digits??2)-1);const hi=10**(custom?.digits??2)-1;a=randomInt(lo,hi);b=randomInt(lo,hi)}
+    const [min,max]=difficulty==='custom'?digitRange(custom?.digits??2):digitRange(difficulty==='easy'?1:difficulty==='medium'?2:3);
+    a=randomInt(min,max);b=randomInt(min,max);
     answer=a*b;expression=`${a} × ${b}`;
   } else if(operation==='divide'){
-    if(difficulty==='easy'){b=randomInt(2,9);answer=randomInt(2,9);a=b*answer}
-    else if(difficulty==='medium'){b=randomInt(2,12);answer=randomInt(2,Math.floor(999/b));a=b*answer}
-    else if(difficulty==='custom'){
-      const [min,max]=digitRange(custom?.digits??2);
-      b=randomInt(Math.max(2,min),max);
-      answer=randomInt(Math.ceil(min/b),Math.floor(max/b));
-      a=b*answer;
-    }
-    else {b=randomInt(2,25);answer=randomInt(10,99);a=b*answer}
-    if(difficulty==='hard'&&digits(a)!==3){b=randomInt(5,20);answer=randomInt(Math.ceil(100/b),Math.floor(999/b));a=b*answer}
+    const [min,max]=difficulty==='custom'?digitRange(custom?.digits??2):digitRange(difficulty==='easy'?1:difficulty==='medium'?2:3);
+    b=randomInt(Math.max(2,min),max);
+    answer=randomInt(Math.ceil(min/b),Math.floor(max/b));
+    a=b*answer;
     expression=`${a} ÷ ${b}`;
   } else if(operation==='square'){
     const [min,max]=digitRange(custom?.digits??2);
@@ -71,4 +61,45 @@ export function generateQuestion(difficulty:Difficulty='easy', selectedOperation
 
 export function generateQuestions(count:number,difficulty:Difficulty,operations?:Operation[],custom?:CustomConfig):MathQuestion[]{
   return Array.from({length:count},()=>generateQuestion(difficulty,operations,custom));
+}
+
+export function questionSignature(question:MathQuestion):string {
+  if(question.operation==='add'||question.operation==='multiply'){
+    const [first,second]=[question.operand1,question.operand2].sort((a,b)=>a-b);
+    return `${question.operation}:${first}:${second}`;
+  }
+  return `${question.operation}:${question.expression.replace(/\s+/g,'').toLocaleLowerCase('tr-TR')}`;
+}
+
+export function generateUniqueQuestion(
+  difficulty:Difficulty,
+  operations:Operation[],
+  seen:Set<string>,
+  custom?:CustomConfig,
+):MathQuestion|null {
+  for(let attempt=0;attempt<5000;attempt++){
+    const question=generateQuestion(difficulty,operations,custom);
+    const signature=questionSignature(question);
+    if(!seen.has(signature)){
+      seen.add(signature);
+      return question;
+    }
+  }
+  return null;
+}
+
+export function generateUniqueQuestions(
+  count:number,
+  difficulty:Difficulty,
+  operations:Operation[],
+  seen:Set<string>,
+  custom?:CustomConfig,
+):MathQuestion[] {
+  const questions:MathQuestion[]=[];
+  while(questions.length<count){
+    const question=generateUniqueQuestion(difficulty,operations,seen,custom);
+    if(!question)break;
+    questions.push(question);
+  }
+  return questions;
 }
