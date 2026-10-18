@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Zihin Matematik"
+description = "Türkçe, klavye odaklı zihinsel matematik antrenörü. Dört işlem ve ileri modlarda pratik, hız oyunları, tema ve ses ayarları ile yerel performans istatistikleri sunar."
+version = "1.0.0"
+id = "artifacts/zihin-matematik"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23536
+
+[services.development]
+run = "pnpm --filter @workspace/zihin-matematik run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/zihin-matematik", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/zihin-matematik/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23536"
+BASE_PATH = "/"

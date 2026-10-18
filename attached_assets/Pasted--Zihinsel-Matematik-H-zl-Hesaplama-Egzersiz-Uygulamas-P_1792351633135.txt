@@ -1,0 +1,156 @@
+# Zihinsel Matematik & Hızlı Hesaplama Egzersiz Uygulaması (Pratik Beyin Antrenörü)
+
+Bu doküman; zihinsel işlem hızınızı, tepki sürenizi ve pratik matematik yeteneğinizi maksimuma çıkaracak, klavye odaklı, minimalist ve performanslı bir Web uygulamasının uçtan uca geliştirme planını içerir.
+
+---
+
+## Teknolojik Altyapı
+- **Framework:** React 18+ (TypeScript ile)
+- **Build Tool:** Vite
+- **Styling:** Tailwind CSS (Koyu / Aydınlık tema desteği)
+- **State & Depolama:** React Hooks + `localStorage` (Harici backend/database gerekmez)
+- **Ses & Efektler:** Web Audio API (Dış kütüphane bağımlılığı olmadan yerel bip/onay sesleri)
+
+---
+
+## FAZ 1: Temel İskelet, Soru Üretim Motoru ve Klavye Odaklı UI
+
+### Hedef
+Sıfırdan Vite + React + TypeScript + Tailwind CSS projesi kurarak, fare kullanmadan sadece klavyeyle oynanabilen, anlık cevap kontrolü ve temel dört işlem soru üretim motoru olan minimalist arayüzü inşa etmek.
+
+### Dokunulacak Dosya ve Dizinler
+- `src/types/math.ts`
+- `src/services/mathEngine.ts`
+- `src/components/QuizCard.tsx`
+- `src/components/Header.tsx`
+- `src/App.tsx`
+
+### Yapılacaklar
+1. **Veri Tipleri (`src/types/math.ts`):**
+   - İşlem türleri: `add` (+), `subtract` (-), `multiply` (x), `divide` (÷).
+   - Zorluk Seviyeleri: `easy`, `medium`, `hard`, `custom`.
+   - Soru Modeli: `{ id, operand1, operand2, operation, correctAnswer, userAnswers, timeSpentMs }`.
+2. **Soru Üretim Motoru (`src/services/mathEngine.ts`):**
+   - **Kolay:** 1-2 basamaklı sayılar (Örn: $14 + 27$, $8 \times 7$).
+   - **Orta:** 2-3 basamaklı toplama/çıkarma, 1x2 basamaklı çarpma, kalansız bölme (Örn: $142 - 68$, $96 \div 6$, $14 \times 8$).
+   - **Zor:** 3 basamaklı toplama/çıkarma, 2x2 basamaklı çarpma, 3 basamaklı kalansız bölme (Örn: $35 \times 12$, $450 \div 15$).
+   - *Kural:* Bölme işlemlerinin sonucu HER ZAMAN tam sayı olmalı, asla ondalık üretilmemelidir.
+3. **Klavye Odaklı Arayüz (`src/components/QuizCard.tsx`):**
+   - Ekranda devasa ve net punto ile soru gösterimi.
+   - Otomatik odaklanan (auto-focused) girdili cevap alanı (`<input type="number">`).
+   - Cevap yazıldığı an (veya `Enter` basıldığında) anında doğrulama:
+     - Doğruysa: Anında yeşil parlama efekti ve sonraki soruya geçiş (0.1 saniye gecikmesiz).
+     - Yanlışsa: Hafif kırmızı titreme efekti ve alanın temizlenmesi.
+4. **Zamanlayıcı ve İlerleme:**
+   - Soru bazlı kronometre (milisaniye cinsinden tutulacak).
+
+### Yapılmayacaklar
+- Fare kullanımını zorunlu kılacak hiçbir düğme yerleştirmeme (Her şey `Enter`, `Tab`, `Space` ve sayı tuşlarıyla yönetilmelidir).
+- Karmaşık animasyonlar veya dikkati dağıtan görseller eklememe.
+
+### Test / Doğrulama
+- `npm run build` komutunun sorunsuz derlendiğini doğrula.
+- Klavye ile yazıldığı an cevabın kontrol edildiğini ve yeni soruya milisaniyelik hızla geçildiğini test et.
+
+---
+
+## FAZ 2: Gelişmiş Zihinsel Modlar ve Esnek Ayarlar
+
+### Hedef
+Uygulamaya kare alma, karekök, yüzde hesaplama, zincirleme işlemler ve kullanıcıya özel basamak/zorluk ayarlama yetenekleri kazandırmak.
+
+### Dokunulacak Dosya ve Dizinler
+- `src/services/mathEngine.ts`
+- `src/components/ModeSelector.tsx`
+- `src/components/CustomSettingsModal.tsx`
+- `src/components/MissedQuestionsReview.tsx`
+
+### Yapılacaklar
+1. **İleri Düzey Zihin Modları (`mathEngine.ts`):**
+   - **Kare & Karekök Modu:** $11^2$ ile $30^2$ arası kareler ve $\sqrt{144}$, $\sqrt{625}$ gibi tam kare kökler.
+   - **Yüzde Pratiği Modu:** Zihinden pratik hesaplanabilen yüzdeler (Örn: $240$'ın $\%15$'i, $80$'in $\%25$'i, $450$'nin $\%10$'u).
+   - **Zincir İşlemler:** Parantezli veya 3 elemanlı işlemler (Örn: $(12 + 8) \times 3$, $100 - 45 + 18$).
+2. **Özel Zorluk Yapılandırması (`CustomSettingsModal.tsx`):**
+   - Kullanıcının terimlerin basamak sayılarını (1, 2, 3 veya 4 basamak) manuel belirlemesi.
+   - Hangi işlem türlerinin teste dahil edileceğini seçebileceği kutucuklar (sadece çarpma ve kare alma gibi).
+3. **Yanlış Yapılan Soruları Tekrar Etme:**
+   - Oturum sırasında yanlış yanıtlanan veya fazla zaman harcanan soruları hafızaya alıp test sonunda "Hataları Tekrar Et" butonu ile tekrar sorma.
+
+### Yapılmayacaklar
+- Zihinden çözülmesi mantıksız olan ondalıklı veya kesirli sonuç veren rastgele sorular türetme.
+
+### Test / Doğrulama
+- `npm run build` komutunun hatasız çalıştığını doğrula.
+- Karekök ve yüzde modlarında üretilen soruların cevaplarının %100 doğru matematiksel karşılık barındırdığını kontrol et.
+
+---
+
+## FAZ 3: Hız/Tepki Süresi Ölçümü, Zayıf Nokta Tespiti ve İstatistik Paneli
+
+### Hedef
+Kullanıcının soru başına harcadığı süreyi milisaniye hassasiyetinde kaydetmek, zayıf olduğu işlem türlerini tespit etmek ve tüm verileri `localStorage` üzerinde saklayarak bir analitik paneli sunmak.
+
+### Dokunulacak Dosya dan Dizinler
+- `src/services/analytics.ts`
+- `src/components/StatsDashboard.tsx`
+- `src/components/WeakSpotsCard.tsx`
+- `src/App.tsx`
+
+### Yapılacaklar
+1. **Analitik Servisi (`src/services/analytics.ts`):**
+   - Her yanıt için: `questionId`, `operationType`, `difficulty`, `timeSpentMs`, `isCorrect`, `timestamp` verilerini `localStorage` içinde sakla.
+2. **Performans Göstergeleri (`StatsDashboard.tsx`):**
+   - **Ortalama Tepki Süresi:** Soru başına harcanan ortalama milisaniye (Örn: 1.45 saniye).
+   - **Doğruluk Oranı (%):** Toplam doğru / yanlış oranı.
+   - **Hız Grafiği/Trendi:** Son 10 testteki ortalama hızı gösteren basit SVG/Canvas grafiği.
+   - **Mevcut Seri (Streak):** Hata yapmadan peş peşe bilinen soru sayısı.
+3. **Zayıf Nokta Analiz Motoru (`WeakSpotsCard.tsx`):**
+   - Verileri analiz ederek kullanıcının en yavaş kaldığı veya en çok hata yaptığı kategoriyi bul:
+     *(Örn: "Çarpma işlemlerinde ortalama 3.2s harcıyorsun, toplamaya göre %60 daha yavaşsın!").*
+   - **"Zayıf Noktaları Güçlendir" Butonu:** Tek tıkla sadece kullanıcının zayıf olduğu işlem türünden 20 soruluk özel antrenman başlatma.
+
+### Yapılmayacaklar
+- Harici bir veritabanı veya API sunucusu bağlamama (Tüm süreç %100 istemci tarafında ve gizlilik odaklı çalışmalıdır).
+
+### Test / Doğrulama
+- `npm run build` derlemesini doğrula.
+- Test tamamlandıktan sonra sürenin milisaniye bazında doğru hesaplandığını ve `localStorage` temizlense bile uygulamanın çökmediğini doğrula.
+
+---
+
+## FAZ 4: Oyun Modları, Ses/Görsel Efektler ve Ergonomik Kısayollar
+
+### Hedef
+Uygulamayı eğlenceli ve sürdürülebilir bir günlük alışkanlık haline getirmek için zamana karşı yarış modları, Web Audio ses efektleri, görsel temalar ve tam klavye kısayolları eklemek.
+
+### Dokunulacak Dosya ve Dizinler
+- `src/services/soundEffects.ts`
+- `src/components/GameModeSelector.tsx`
+- `src/components/ThemeToggle.tsx`
+- `src/App.tsx`
+
+### Yapılacaklar
+1. **Oyun Modları (`GameModeSelector.tsx`):**
+   - **Maraton Modu:** 60 saniyede kaç doğru yapabilirsin? (Her doğru cevap +1 saniye kazandırır).
+   - **Ani Ölüm (Sudden Death):** İlk hatada test biter! Kaç soru dayanabilirsin?
+   - **Sprint Modu:** 20 soruyu en kısa sürede tamamlama yarışı.
+2. **Web Audio API Ses Efektleri (`soundEffects.ts`):**
+   - Dış `.mp3` dosyası yüklemeden, tarayıcının synthesizer özelliğini kullanarak:
+     - Doğru cevap ses tonu (yüksek frekanslı tatlı bip).
+     - Yanlış cevap ses tonu (düşük frekanslı tok ses).
+     - Seri (Streak) ve Rekor kırıldığında çalan zafer melodisi.
+     - Sesi açma/kapatma (Mute) seçeneği.
+3. **Tema Desteği (`ThemeToggle.tsx`):**
+   - Koyu (Dark Mode), Aydınlık (Light Mode) ve Yüksek Kontrastlı Cyberpunk/Matrix teması.
+4. **Ergonomik Klavye Kısayolları Global Dinleyicisi:**
+   - `Space` / `Enter`: Testi Başlat / Sonraki Soru
+   - `R`: Testi Yeniden Başlat (Restart)
+   - `Esc`: Testi Duraklat / Ana Menüye Dön
+   - `1-4`: Modlar Arası Hızlı Geçiş
+
+### Yapılmayacaklar
+- Ağır ses kütüphaneleri (`howler` vb.) veya büyük medya dosyaları import etme (Web Audio API yerel fonksiyonları yeterlidir).
+
+### Test / Doğrulama
+- Proje genelinde `npm run build` komutunun sıfır hata ile tamamlandığını doğrula.
+- Kısayol tuşlarının (R, Esc, Space) metin girdisi içindeyken çakışmadığını ve oyun modlarının sorunsuz çalıştığını test et.
