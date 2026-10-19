@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { BarChart3, Clock3, Flame, RotateCcw, Sparkles, Target } from 'lucide-react';
+import { AttentionGame } from './components/AttentionGame';
+import { GameMenu } from './components/GameMenu';
 import { Header } from './components/Header';
+import { PatternGame } from './components/PatternGame';
+import { TargetGame } from './components/TargetGame';
 import { LogoMark } from './components/Logo';
 import { QuizCard } from './components/QuizCard';
 import { ModeSelector } from './components/ModeSelector';
@@ -15,6 +19,7 @@ import { BASIC_OPERATIONS, type AppData, type Difficulty, type GameMode, type Ma
 function App() {
   const [data,setData]=useState<AppData>(()=>loadData());
   const [statsOpen,setStatsOpen]=useState(false);
+  const [screen,setScreen]=useState<'menu'|'math'|'pattern'|'attention'|'target'>('menu');
   const [customOpen,setCustomOpen]=useState(false);
   const [started,setStarted]=useState(false);
   const [running,setRunning]=useState(false);
@@ -22,7 +27,7 @@ function App() {
   const [question,setQuestion]=useState<MathQuestion|null>(null);
   const [queue,setQueue]=useState<MathQuestion[]>([]);
   const [value,setValue]=useState('');
-  const [feedback,setFeedback]=useState<'correct'|'wrong'|null>(null);
+  const [feedback,setFeedback]=useState<'correct'|'wrong'|'skip'|null>(null);
   const [elapsed,setElapsed]=useState(0);
   const [remaining,setRemaining]=useState<number|null>(null);
   const [answered,setAnswered]=useState(0);
@@ -95,15 +100,31 @@ function App() {
     return()=>window.clearInterval(interval)
   },[running,paused,data.settings.mode,remaining,finish]);
 
-  const nextQuestion=(current:MathQuestion)=>{
-    if(sessionKind==='regular'&&data.settings.mode==='sprint'&&correct+1>=20){finish({total:answered+1,right:correct+1,wrong:incorrect});return}
-    if(sessionKind!=='regular'&&queue.length===0){finish({total:answered+1,right:correct+1,wrong:incorrect});return}
+  const advance=(counts:{total:number;right:number;wrong:number})=>{
+    if(sessionKind==='regular'&&data.settings.mode==='sprint'&&counts.total>=20){finish(counts);return}
+    if(sessionKind!=='regular'&&queue.length===0){finish(counts);return}
     const next=queue[0];
     const nextOperations=sessionKind==='weak'&&opsForSession.current.length?opsForSession.current:activeOperations;
     const fresh=next??generateUniqueQuestion(data.settings.difficulty,nextOperations,seenQuestions.current,data.settings.custom);
-    if(!fresh){setPoolExhausted(true);finish();return}
+    if(!fresh){setPoolExhausted(true);finish(counts);return}
     if(next)setQueue(q=>q.slice(1));
     setQuestion(fresh);questionAt.current=Date.now();setValue('');setFeedback(null);submitting.current=false;
+  };
+  const nextQuestion=()=>advance({total:answered+1,right:correct+1,wrong:incorrect});
+  const skip=()=>{
+    if(!running||!question||submitting.current)return;
+    if(autoTimer.current){clearTimeout(autoTimer.current);autoTimer.current=null}
+    submitting.current=true;
+    const now=Date.now(),time=Math.max(0,now-questionAt.current);
+    responseTimes.current.push(time);
+    const log:ResponseLog={questionId:question.id,operationType:question.operation,difficulty:data.settings.difficulty,timeSpentMs:time,isCorrect:false,timestamp:now};
+    commitData(recordResponse(data,log));
+    setAnswered(n=>n+1);setIncorrect(n=>n+1);setSessionStreak(0);
+    const missed={...question,userAnswers:[...question.userAnswers],timeSpentMs:question.timeSpentMs+time};
+    setReview(prev=>prev.some(q=>q.id===question.id)?prev:[...prev,missed]);
+    setValue(String(question.correctAnswer));setFeedback('skip');
+    const counts={total:answered+1,right:correct,wrong:incorrect+1};
+    window.setTimeout(()=>{if(data.settings.mode==='sudden')finish(counts);else advance(counts)},900);
   };
 
   const submit=useCallback(()=>{
@@ -121,7 +142,7 @@ function App() {
       setQuestion({...question,userAnswers:[...question.userAnswers,answer],timeSpentMs:question.timeSpentMs+time});
       setFeedback('correct');if(!data.settings.muted){if(sessionStreak>=4)soundEffects.streak();else soundEffects.correct()}
       if(data.settings.mode==='marathon')setRemaining(n=>(n??60000)+1000);
-      window.setTimeout(()=>nextQuestion(question),115);
+      window.setTimeout(()=>nextQuestion(),115);
     }else{
       setIncorrect(n=>n+1);setSessionStreak(0);
       const missed={...question,userAnswers:[...question.userAnswers,answer],timeSpentMs:question.timeSpentMs+time};
@@ -161,7 +182,7 @@ function App() {
     const handler=(e:KeyboardEvent)=>{
       const target=e.target as HTMLElement|null;
       const editable=!!target&&(target.isContentEditable||['INPUT','TEXTAREA','SELECT'].includes(target.tagName));
-      if(editable)return;
+      if(editable||screen!=='math')return;
       if(e.key===' '||e.key==='Enter'){e.preventDefault();if(running){if(e.key==='Enter')submit()}else if(paused)pause();else if(!result)begin()}
       if(e.key.toLowerCase()==='r'){e.preventDefault();restart()}
       if(e.key==='Escape'){e.preventDefault();if(running||paused)pause();else if(started&&!result)finish()}
@@ -183,8 +204,8 @@ function App() {
   return <div className="app-shell" data-theme={data.settings.theme}>
     <div className="wrap">
       <Header theme={data.settings.theme} muted={data.settings.muted} onMute={toggleMute} onTheme={cycleTheme} onStats={()=>setStatsOpen(v=>!v)} statsOpen={statsOpen}/>
-      {statsOpen?<StatsDashboard data={data} onWeakWorkout={onWeak}/>:<>
-        <div className="hero"><div><p className="eyebrow">Günlük zihin antrenmanı · {new Date().toLocaleDateString('tr-TR',{weekday:'long',day:'numeric',month:'long'})}</p><h1>Hız, biraz<br/>alışkanlık meselesi.</h1><p>Bir dakikanı ayır. Aklından çöz, ritmini yakala ve her gün biraz daha rahatla.</p></div><div className="daily-mark"><div><strong>{data.currentStreak}</strong>seri</div></div></div>
+      {statsOpen?<StatsDashboard data={data} onWeakWorkout={onWeak}/>:screen==='menu'?<GameMenu onMath={()=>setScreen('math')} onPattern={()=>setScreen('pattern')} onAttention={()=>setScreen('attention')} onTarget={()=>setScreen('target')}/>:screen==='pattern'?<PatternGame muted={data.settings.muted} onExit={()=>setScreen('menu')}/>:screen==='attention'?<AttentionGame muted={data.settings.muted} onExit={()=>setScreen('menu')}/>:screen==='target'?<TargetGame onExit={()=>setScreen('menu')}/>:<>
+        <button className="game-back" type="button" onClick={()=>{if(running){pauseAt.current=Date.now();setRunning(false);setPaused(true)}setScreen('menu')}} data-testid="math-exit">Oyunlar</button>
         {result?<div className="main-grid animate-in">
           <section className="panel result-card" data-testid="session-results"><p className="eyebrow">Oturum tamamlandı</p><div className="result-score">{result.correct}<span style={{fontSize:24,color:'var(--subtle)'}}> / {result.total}</span></div><p className="result-subtitle">{poolExhausted?'Bu ayardaki farklı sorular tamamlandı. Yeni turda soru havuzu yeniden karışacak.':result.correct===result.total&&result.total>0?'Temiz ve akıcı bir tur.':result.correct?'İyi iş. Bir tur daha hız kazandırır.':'İlk tekrar tamam. Buradan başlıyoruz.'}</p>
             <div className="result-metrics"><div className="result-metric"><strong>{result.incorrect}</strong><span>YANLIŞ</span></div><div className="result-metric"><strong>{result.averageMs?(result.averageMs/1000).toFixed(2)+'s':'—'}</strong><span>ORT. SÜRE</span></div><div className="result-metric"><strong>{result.total?Math.round(result.correct/result.total*100):0}%</strong><span>DOĞRULUK</span></div><div className="result-metric"><strong>{result.streak}</strong><span>EN İYİ SERİ</span></div></div>
@@ -194,7 +215,7 @@ function App() {
           <aside className="side-stack"><ModeSelector mode={data.settings.mode} difficulty={data.settings.difficulty} selectedOperations={visibleOperations} onMode={chooseMode} onDifficulty={chooseDifficulty} onCustom={()=>setCustomOpen(true)} onToggleOperation={toggleOperation}/><section className="weak-card"><p className="eyebrow">Güzel bir başlangıç</p><h2>Bugünün pratiği tamam.</h2><p>İlerleme kaydın bu cihazda saklandı. Yarın kaldığın yerden devam et.</p><button className="quiet-button" onClick={()=>begin('weak')} data-testid="result-weak-workout"><Sparkles size={14}/> Güçlü kal</button></section></aside>
         </div>:<div className="main-grid">
           <div className="side-stack">
-            <QuizCard question={displayedQuestion} value={value} onValue={setValue} onSubmit={submit} feedback={feedback} running={running} paused={paused} started={started} elapsed={elapsed} remaining={remaining} mode={currentModeName} answered={answered} total={planTotal} onStart={()=>{if(paused){setPaused(false);setRunning(true)}else begin()}} onPause={pause} onRestart={restart} onEscape={()=>finish()}/>
+            <QuizCard question={displayedQuestion} value={value} onValue={setValue} onSubmit={submit} onSkip={skip} feedback={feedback} running={running} paused={paused} started={started} elapsed={elapsed} remaining={remaining} mode={currentModeName} answered={answered} total={planTotal} onStart={()=>{if(paused){setPaused(false);setRunning(true)}else begin()}} onPause={pause} onRestart={restart} onEscape={()=>finish()}/>
             <div className="below-grid">
               <section className="panel side-panel"><div className="side-title"><h2>Bu oturum</h2><Target size={16} color="var(--green)"/></div><div className="quick-stats"><div className="metric"><strong>{correct}</strong><span>Doğru</span></div><div className="metric"><strong>{incorrect}</strong><span>Yanlış</span></div><div className="metric"><strong>{sessionStreak}</strong><span>Seri</span></div><div className="metric"><strong>{(elapsed/1000).toFixed(0)}s</strong><span>Odak süresi</span></div></div></section>
               <section className="panel side-panel"><div className="side-title"><h2>Odak ipucu</h2><Sparkles size={16} color="var(--orange)"/></div><p style={{fontSize:12,lineHeight:1.7,color:'var(--subtle)',margin:'8px 0 0'}}>Cevabı zihninde tamamla; yazarken ritmini bozma. Yanlış cevaplar yalnızca sana görünür.</p><div className="hint-line"><span className="keycap">Space</span> başlat <span className="keycap">R</span> yeniden başlat <span className="keycap">Esc</span> duraklat</div></section>
