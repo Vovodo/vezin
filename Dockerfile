@@ -4,20 +4,9 @@ WORKDIR /app
 
 RUN corepack enable && corepack prepare pnpm@10.15.1 --activate
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
-COPY artifacts/zihin-matematik/package.json artifacts/zihin-matematik/package.json
-COPY artifacts/api-server/package.json artifacts/api-server/package.json
-COPY artifacts/mockup-sandbox/package.json artifacts/mockup-sandbox/package.json
-COPY lib/api-client-react/package.json lib/api-client-react/package.json
-COPY lib/api-spec/package.json lib/api-spec/package.json
-COPY lib/api-zod/package.json lib/api-zod/package.json
-COPY lib/db/package.json lib/db/package.json
-COPY scripts/package.json scripts/package.json
+COPY . .
 
 RUN pnpm install --frozen-lockfile --filter @workspace/zihin-matematik...
-
-COPY artifacts/zihin-matematik artifacts/zihin-matematik
-COPY lib/api-client-react lib/api-client-react
 
 ENV PORT=80
 ENV BASE_PATH=/
