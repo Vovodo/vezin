@@ -1,0 +1,8 @@
+.git
+.cursor
+**/node_modules
+**/dist
+**/.vite
+*.md
+agent-transcripts
+terminals

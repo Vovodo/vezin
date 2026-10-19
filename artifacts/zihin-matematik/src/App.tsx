@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { BarChart3, Clock3, Flame, RotateCcw, Sparkles, Target } from 'lucide-react';
 import { Header } from './components/Header';
+import { LogoMark } from './components/Logo';
 import { QuizCard } from './components/QuizCard';
 import { ModeSelector } from './components/ModeSelector';
 import { CustomSettingsModal } from './components/CustomSettingsModal';
@@ -205,7 +206,7 @@ function App() {
           </aside>
         </div>}
       </>}
-      <footer className="footer"><span>Zihin Matematik <span style={{color:'var(--green)'}}>·</span> Kendinle yarış.</span><span>Hesapların bu cihazda saklanır.</span></footer>
+      <footer className="footer"><span><span className="footer-mark"><LogoMark size={14} /></span>Vezin <span style={{color:'var(--green)'}}>·</span> Kendinle yarış.</span><span>Hesapların bu cihazda saklanır.</span></footer>
     </div>
     {customOpen&&<CustomSettingsModal config={data.settings.custom} onClose={()=>setCustomOpen(false)} onSave={custom=>commitData(updateSettings(data,{custom,difficulty:'custom'}))}/>}
   </div>

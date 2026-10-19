@@ -35,6 +35,7 @@ button,input { font:inherit; } button { cursor:pointer; }
 .brand-mark { display:grid; place-items:center; width:38px;height:38px;border-radius:13px;background:var(--green);color:#f5f3e9;font-family:var(--app-font-mono);font-size:19px;box-shadow:4px 4px 0 var(--lime); }
 .top-actions {display:flex;align-items:center;gap:9px}
 .icon-button,.quiet-button { border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:13px;padding:10px 13px;display:inline-flex;gap:8px;align-items:center;transition:transform .18s,border-color .18s; }
+a.apk-link { text-decoration:none; font-weight:700; font-size:13px; }
 .icon-button:hover,.quiet-button:hover { transform:translateY(-2px);border-color:var(--green); }
 .eyebrow {font:500 11px var(--app-font-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--subtle)}
 .hero {display:grid;grid-template-columns:1fr auto;align-items:end;gap:30px;padding:42px 0 29px}
@@ -108,6 +109,7 @@ button,input { font:inherit; } button { cursor:pointer; }
 .operation-picks {display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.operation-pick{border:1px solid var(--line);border-radius:10px;padding:10px 5px;background:transparent;color:var(--ink);font-size:11px}.operation-pick.selected{background:color-mix(in srgb,var(--green) 12%,transparent);border-color:var(--green);color:var(--green)}
 .operation-picks.operation-picker {grid-template-columns:repeat(2,minmax(0,1fr));margin-top:8px}.operation-picker .operation-pick {padding:10px 8px;font-weight:650;transition:background .15s,border-color .15s,color .15s}.modal-hint {color:var(--subtle);font-size:11px;line-height:1.55;margin:10px 0 0}
 .footer {border-top:1px solid var(--line);padding:17px 0 26px;color:var(--subtle);font-size:10px;display:flex;justify-content:space-between;gap:14px}
+.footer-mark {display:inline-flex;color:var(--green);margin-right:6px;vertical-align:-3px}
 @keyframes shake {25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
 @keyframes appear {from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 .animate-in {animation:appear .35s ease both}
