@@ -139,6 +139,47 @@ type Draft={operation:Operation;operand1:number;operand2:number;correctAnswer:nu
 type Pool={key:string;size:number;at:(index:number,salt:number)=>Draft};
 
 const divideCache=new Map<string,Array<[number,number]>>();
+const sumCache=new Map<string,Array<[number,number]>>();
+
+function addBand(difficulty:Difficulty,custom?:CustomConfig):[number,number]{
+  if(difficulty==='custom')return digitRange(custom?.digits??2);
+  if(difficulty==='easy')return [23,78];
+  if(difficulty==='medium')return [36,99];
+  return [101,999];
+}
+
+function taxingSum(left:number,right:number){
+  if(left<10||right<10||left%10===0||right%10===0||left%100===0||right%100===0)return false;
+  return (left%10)+(right%10)>=10;
+}
+
+function taxingDifference(larger:number,smaller:number){
+  if(smaller<10||larger%10===0||smaller%10===0||larger%100===0||smaller%100===0)return false;
+  if((larger%10)>=(smaller%10))return false;
+  return larger-smaller>=12;
+}
+
+function sumPairs(min:number,max:number,operation:'add'|'subtract'){
+  const key=`${operation}:${min}:${max}`;
+  const cached=sumCache.get(key);
+  if(cached)return cached;
+  const pairs:Array<[number,number]>=[];
+  if(operation==='add'){
+    for(let left=min;left<=max;left++){
+      for(let right=left;right<=max;right++){
+        if(taxingSum(left,right))pairs.push([left,right]);
+      }
+    }
+  }else{
+    for(let larger=min+1;larger<=max;larger++){
+      for(let smaller=min;smaller<larger;smaller++){
+        if(taxingDifference(larger,smaller))pairs.push([larger,smaller]);
+      }
+    }
+  }
+  sumCache.set(key,pairs);
+  return pairs;
+}
 
 function dividePairs(min:number,max:number){
   const key=`${min}:${max}`;
@@ -158,43 +199,57 @@ function makePool(difficulty:Difficulty,operation:Operation,custom?:CustomConfig
   const digits=custom?.digits??2;
   const key=`${difficulty}:${operation}:${digits}`;
   if(operation==='add'||operation==='subtract'){
-    const [min,max]=basicBand(difficulty,custom);
-    const count=max-min+1;
-    const size=operation==='add'?count*(count+1)/2:count*(count-1)/2;
-    if(size<=0)return null;
-    return {key,size,at:(index,salt)=>{
-      if(operation==='add'){
-        const [left,right]=unrankPair(index,count);
-        let operand1=min+left,operand2=min+right;
-        if(operand1!==operand2&&((index+salt)&1)===1)[operand1,operand2]=[operand2,operand1];
-        return {operation,operand1,operand2,correctAnswer:operand1+operand2,expression:`${operand1} + ${operand2}`};
-      }
-      const [larger,smaller]=unrankStrict(index,count);
-      const operand1=min+larger,operand2=min+smaller;
-      return {operation,operand1,operand2,correctAnswer:operand1-operand2,expression:`${operand1} − ${operand2}`};
+    const [min,max]=addBand(difficulty,custom);
+    if(difficulty==='custom'&&(custom?.digits??2)<=1){
+      const count=max-min+1;
+      const size=operation==='add'?count*(count+1)/2:count*(count-1)/2;
+      if(size<=0)return null;
+      return {key,size,at:(index,salt)=>{
+        if(operation==='add'){
+          const [left,right]=unrankPair(index,count);
+          let operand1=min+left,operand2=min+right;
+          if(operand1!==operand2&&((index+salt)&1)===1)[operand1,operand2]=[operand2,operand1];
+          return {operation,operand1,operand2,correctAnswer:operand1+operand2,expression:`${operand1} + ${operand2}`};
+        }
+        const [larger,smaller]=unrankStrict(index,count);
+        const operand1=min+larger,operand2=min+smaller;
+        return {operation,operand1,operand2,correctAnswer:operand1-operand2,expression:`${operand1} − ${operand2}`};
+      }};
+    }
+    const pairs=sumPairs(min,max,operation);
+    if(!pairs.length)return null;
+    return {key:`${key}:${min}:${max}`,size:pairs.length,at:(index,salt)=>{
+      const [first,second]=pairs[index];
+      if(operation==='subtract')return {operation,operand1:first,operand2:second,correctAnswer:first-second,expression:`${first} − ${second}`};
+      let operand1=first,operand2=second;
+      if(operand1!==operand2&&((index+salt)&1)===1)[operand1,operand2]=[operand2,operand1];
+      return {operation,operand1,operand2,correctAnswer:operand1+operand2,expression:`${operand1} + ${operand2}`};
     }};
   }
   if(operation==='multiply'){
-    if(difficulty==='easy'){
-      const leftMin=2,leftMax=12,rightMax=80;
-      let size=0;
-      for(let left=leftMin;left<=leftMax;left++)size+=rightMax-left+1;
-      return {key,size,at:(index,salt)=>{
-        let cursor=index,left=leftMin;
-        while(left<leftMax&&cursor>rightMax-left){cursor-=rightMax-left+1;left++}
-        let operand1=left,operand2=left+cursor;
+    const digits=difficulty==='custom'?custom?.digits??2:difficulty==='easy'?1:difficulty==='medium'?2:3;
+    if(digits<=1){
+      const min=2,count=8;
+      const size=count*(count+1)/2;
+      return {key:`${key}:1digit`,size,at:(index,salt)=>{
+        const [left,right]=unrankPair(index,count);
+        let operand1=min+left,operand2=min+right;
         if(operand1!==operand2&&((index+salt)&1)===1)[operand1,operand2]=[operand2,operand1];
         return {operation,operand1,operand2,correctAnswer:operand1*operand2,expression:`${operand1} × ${operand2}`};
       }};
     }
-    const [min,max]=basicBand(difficulty,custom);
-    const count=max-min+1;
-    const size=count*(count+1)/2;
-    return {key,size,at:(index,salt)=>{
-      const [left,right]=unrankPair(index,count);
-      let operand1=min+left,operand2=min+right;
-      if(operand1!==operand2&&((index+salt)&1)===1)[operand1,operand2]=[operand2,operand1];
-      return {operation,operand1,operand2,correctAnswer:operand1*operand2,expression:`${operand1} × ${operand2}`};
+    const [leftMin,leftMax]=digitRange(digits);
+    const lefts:number[]=[];
+    for(let value=leftMin;value<=leftMax;value++)if(value%10!==0)lefts.push(value);
+    const factorMin=2,factorMax=9;
+    const factorCount=factorMax-factorMin+1;
+    const size=lefts.length*factorCount;
+    return {key:`${key}:${leftMin}:${leftMax}:noround`,size,at:(index,salt)=>{
+      const left=lefts[Math.floor(index/factorCount)];
+      const factor=factorMin+index%factorCount;
+      let operand1=left,operand2=factor;
+      if(((index+salt)&1)===1)[operand1,operand2]=[operand2,operand1];
+      return {operation,operand1,operand2,correctAnswer:left*factor,expression:`${operand1} × ${operand2}`};
     }};
   }
   if(operation==='divide'){
